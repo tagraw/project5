@@ -130,6 +130,28 @@ class GreedyBustersAgent(BustersAgent):
         "Pre-computes the distance between every two points."
         BustersAgent.registerInitialState(self, gameState)
         self.distancer = Distancer(gameState.data.layout, False)
+    
+    def mostLikelyGhostPositions(self, livingGhostPositionDistributions):
+       
+        mostLikelyPositions = []
+        for beliefs in livingGhostPositionDistributions:
+            # argMax returns the key (position) with the highest belief
+            likelyPos = beliefs.argMax()
+            if likelyPos is not None:
+                mostLikelyPositions.append(likelyPos)
+        return mostLikelyPositions
+
+    def minDistanceForAction(self, successorPosition, mostLikelyGhostPositions):
+       
+        minDist = float('inf')
+        
+        # self.distancer is available through the parent class.
+        for ghostPos in mostLikelyGhostPositions:
+            dist = self.distancer.getDistance(successorPosition, ghostPos)
+            if dist < minDist:
+                minDist = dist
+                
+        return minDist if minDist != float('inf') else 0
 
     def chooseAction(self, gameState):
         """
@@ -144,3 +166,33 @@ class GreedyBustersAgent(BustersAgent):
             [beliefs for i, beliefs in enumerate(self.ghostBeliefs)
              if livingGhosts[i+1]]
         "*** YOUR CODE HERE ***"
+        mostLikelyGhostPositions = self.mostLikelyGhostPositions(livingGhostPositionDistributions)
+            
+      
+        if not mostLikelyGhostPositions:
+            # fallback action
+            if Directions.STOP in legal:
+                return Directions.STOP
+            return legal[0]
+        
+        bestAction = None
+        minDistance = float('inf')
+
+        for action in legal:
+            # the position Pacman would move to
+            successorPosition = Actions.getSuccessor(pacmanPosition, action)
+
+            currentActionMinDistance = self.minDistanceForAction(successorPosition, mostLikelyGhostPositions)
+            
+            # Check if this action is the best one so far
+            if currentActionMinDistance < minDistance:
+                minDistance = currentActionMinDistance
+                bestAction = action
+            
+            # Check if this action leads to a closer minimum distance overall
+        if bestAction is None:
+            if Directions.STOP in legal:
+                return Directions.STOP
+            return legal[0]
+                
+        return bestAction

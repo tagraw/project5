@@ -326,6 +326,21 @@ class ExactInference(InferenceModule):
 
         self.beliefs = newBeliefs
 
+    def getNewBeliefMass(self, gameState, oldPos, newPos):
+
+        # P(G_t=oldPos) - Prior belief
+        prior = self.beliefs[oldPos]
+
+        if prior == 0:
+            return 0.0
+
+        # P(G_t+1=newPos | G_t=oldPos) - Transition probability
+        newPosDist = self.getPositionDistribution(gameState, oldPos)
+        transitionProb = newPosDist[newPos]
+
+        # transferred mass
+        return transitionProb * prior
+
     def elapseTime(self, gameState):
         """
         Predict beliefs in response to a time step passing from the current
@@ -336,7 +351,22 @@ class ExactInference(InferenceModule):
         current position is known.
         """
         "*** YOUR CODE HERE ***"
-        raiseNotDefined()
+        newBeliefs = self.beliefs.copy()
+        for pos in newBeliefs:
+            newBeliefs[pos] = 0
+
+        for newPos in self.allPositions:
+            total_mass_for_newPos = 0.0
+            
+            for oldPos in self.allPositions:
+                # Accumulate the mass transferred from oldPos to newPos
+                total_mass_for_newPos += self.getNewBeliefMass(gameState, oldPos, newPos)
+            
+            newBeliefs[newPos] = total_mass_for_newPos
+
+        newBeliefs.normalize()
+
+        self.beliefs = newBeliefs
 
     def getBeliefDistribution(self):
         return self.beliefs
@@ -363,7 +393,15 @@ class ParticleFilter(InferenceModule):
         """
         self.particles = []
         "*** YOUR CODE HERE ***"
-        raiseNotDefined()
+        num_legal_positions = len(self.legalPositions)
+    
+        for i in range(self.numParticles):
+            # Index into the legal positions list
+            pos_index = i % num_legal_positions
+            
+            # Select the position and add it to the list of particles
+            position = self.legalPositions[pos_index]
+            self.particles.append(position)
 
     def observeUpdate(self, observation, gameState):
         """
@@ -397,7 +435,15 @@ class ParticleFilter(InferenceModule):
         This function should return a normalized distribution.
         """
         "*** YOUR CODE HERE ***"
-        raiseNotDefined()
+        beliefs = DiscreteDistribution()
+    
+        # The counts serve as the unnormalized weights/beliefs.
+        for position in self.particles:
+            beliefs[position] += 1
+
+        beliefs.normalize()
+        
+        return beliefs
 
 
 class JointParticleFilter(ParticleFilter):
